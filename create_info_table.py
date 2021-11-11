@@ -1,0 +1,253 @@
+import pdb
+import sys
+import os
+import requests
+import argparse
+import subprocess
+import pdb
+import xml.etree.ElementTree as ET
+import multiprocessing as mp
+
+
+ACCESSION = 0
+ALIAS = 1
+TAXON_ID = 3
+SAMPLE_NAME = 4
+URL = 5
+
+def download_file(info_line, out_path):
+	# assembly = urllib.URLopener()
+	out_file_name = out_path + "_".join(["_".join(info_line[SAMPLE_NAME].split()), info_line[TAXON_ID], info_line[ALIAS], info_line[ACCESSION]]) + ".fa.gz"
+	r = requests.get(info_line[URL], allow_redirects=True)
+	with open(out_file_name, "wb") as out_file:
+		out_file.write(r.content)
+
+	# urllib.urlretrieve(url, out_file_name)
+
+def match_name(given_name, sample_name):
+	for c in sample_name.split():
+		if c == given_name:
+			return True
+	return False
+
+
+def get_xml(accession):
+	xml = requests.get(f"https://www.ebi.ac.uk/ena/browser/api/xml/{accession}?download=true")
+	if xml.status_code != 200:
+		return False
+
+	with open(f"tmp/{accession}", "wb") as out_file:
+		out_file.write(xml.content)
+	return True
+
+
+def parse_xml(accession, path, queue):
+
+	if not get_xml(accession):
+		queue.put({"alias":accession, "path":path})
+
+	info_dict = {"path":path}
+
+	file_tree = ET.parse(f"tmp/{accession}")
+	tree_root = file_tree.getroot()
+
+	for root_item in tree_root:
+		if root_item.tag == "SAMPLE":
+			sample = root_item
+			# the SAMPLE tag attributes has accession, alias and broker_name information
+			for key, value in sample.attrib.items():
+				info_dict[key] = value
+
+			for sample_element in sample:
+				if sample_element.tag == 'SAMPLE_NAME':
+					for element in sample_element:
+						if element.tag == "TAXON_ID":
+							info_dict["taxon_id"] = int(element.text)
+						if element.tag == "SCIENTIFIC_NAME":
+							info_dict["scientific_name"] = element.text.lower()
+
+	queue.put(info_dict)
+
+
+def return_line(info_dict):
+	keys = ["accession", "alias", "broker_name", "taxon_id", "scientific_name", "path"]
+	output = []
+	# output = [info_dict["accession"], info_dict["alias"], info_dict["broker_name"], info_dict["taxon_id"], info_dict["scientific_name"], info_dict["path"]]
+	for k in keys:
+		if k in info_dict:
+			output.append(info_dict[k])
+
+	return("\t".join([str(x) for x in output]))
+
+
+def yeild_accessions(sample_id_cobsi_table):
+	
+	with open(sample_id_cobsi_table, "r") as in_file:
+		for l in in_file:
+			yield(l.strip().split())
+
+
+parser = argparse.ArgumentParser(description='Get COBSI database info for an organism', add_help=True)
+subparsers = parser.add_subparsers(help='Available subcommands', dest="subcommands")
+
+
+parser.add_argument("--cores", dest="cores", type=int, default=1,
+					help="You can specify corse to make the process faster")
+
+
+creating_table = subparsers.add_parser('create_table', help='Creating a table with information from accessions from COBSI database')
+creating_table.add_argument("--samples", dest="sample_id", type=str, default=None,
+					help="give the path to the table from COBSI database with accession and assemblies paths")
+creating_table.add_argument("--output_table", dest="output_table", type=str, default="cobsi_sample_information.tsv",
+							help="The output path for the table")
+
+
+get_contigs = subparsers.add_parser("get_contigs", help="Get assemblies related to taxon id or organism given")
+get_contigs.add_argument("--info_table", dest="table", type=str, default=None,
+						help="The information table that was produce with crate_table subcommand")
+
+get_contigs.add_argument("--taxon_id", dest="taxon_id", type=int, default=None,
+						help="Give the taxon id of the organism you are interested in")
+
+get_contigs.add_argument("--org_name", dest="org_name", type=str, default=None,
+						help="Give the genus or species name, e.g. Myxoccoccus, Escherichia")
+
+get_contigs.add_argument("--output_dir", dest="out_dir", type=str, default=".",
+						help="Speicfy the output directory for the assemblies")
+
+args = parser.parse_args()
+
+if args.cores > os.cpu_count():
+	print("You don't have that many corse unfortunately")
+	sys.exit()
+
+
+
+if args.subcommands == "create_table":
+	if args.sample_id is None:
+		print("You need to provide a path to the COBSI file with accessions and path to assemblies")
+		sys.exit()
+
+	try:
+		print("making tmp directory")
+		os.mkdir("tmp")
+	except:
+		subprocess.run("rm tmp/*", shell=True)
+
+	samples = []
+	for accession, path in yeild_accessions(args.sample_id):
+		samples.append((accession, path))
+
+
+	out_file = open(args.output_table, "w")
+	# writing header
+	out_file.write("\t".join(["accession", "alias", "broker_name", "taxon_id", "sample_name", "path_to_assembly"]) + "\n")
+	counter = 0
+	processes = []
+	checkpoint = int(len(samples)/10)
+	if checkpoint == 0:  # avoid divide by 0
+		checkpoint = 1
+
+	queue = mp.Queue()
+	processes = []
+
+	for accession, path in samples:
+		# fixing the path to be a valid ftp path
+		new_path = path.split("/")
+		new_path = "http://ftp.ebi.ac.uk/" + "/".join(new_path[3:])
+
+		process = mp.Process(target=parse_xml, args=(accession, new_path, queue,))
+		processes.append(process)
+		counter += 1
+		if len(processes) == args.cores:
+			for p in processes:
+				p.start()
+			for p in processes:
+				p.join()
+			for p in processes:
+				out_file.write(return_line(queue.get()) + "\n")
+			# emptying to prepare the next batch of graphs
+			processes = []
+			queue = mp.Queue()
+			subprocess.run("rm tmp/*", shell=True)
+
+		if counter % checkpoint == 0:
+			print(f"So far {counter} accessions have been processed")
+
+	# processing the leftovers
+	if processes:
+		for p in processes:
+			p.start()
+		for p in processes:
+			p.join()
+		for p in processes:
+			out_file.write(return_line(queue.get) + "\n")
+
+	# subprocess.run("rm -r tmp/", shell=True)
+	out_file.close()
+
+
+if args.subcommands == "get_contigs":
+	if args.table is None:
+		print("You need to provide the path to the table produced with create_table subcommand")
+		sys.exit()
+
+	if (args.taxon_id is None) and (args.org_name is None):
+		print("You need to either give a taxon id as integer or an organism name")
+		sys.exit()
+
+	elif (args.taxon_id is not None) and (args.org_name is not None):
+		print("You need to either give a taxon id or an organism, not both")
+		sys,exit()
+
+	if args.taxon_id is not None:
+		print(f"Will search for taxon id {args.taxon_id} and download the assemblies related to it in {args.out_dir}")
+
+		processes = []
+
+		with open(args.table, "r") as in_file:
+			next(in_file)
+			for l in in_file:
+				l = l.strip().split("\t")
+				if l[TAXON_ID] == str(args.taxon_id):
+					process = mp.Process(target=download_file, args=(l, args.out_dir))
+					processes.append(process)
+					if len(processes) == args.cores:
+						for p in processes:
+							p.start()
+						for p in processes:
+							p.join()
+
+						processes = []
+
+			if processes:
+				for p in processes:
+					p.start()
+				for p in processes:
+					p.join()
+
+
+	elif args.org_name is not None:
+		processes = []
+
+		with open(args.table, "r") as in_file:
+			next(in_file)
+			for l in in_file:
+				l = l.strip().split("\t")
+				if match_name(args.org_name, l[SAMPLE_NAME].lower()):
+
+					process = mp.Process(target=download_file, args=(l, args.out_dir))
+					processes.append(process)
+					# pdb.set_trace()
+					if len(processes) == args.cores:
+						for p in processes:
+							p.start()
+						for p in processes:
+							p.join()
+						processes = []
+
+			if processes:
+				for p in processes:
+					p.start()
+				for p in processes:
+					p.join()
