@@ -1,7 +1,7 @@
-# cobsi_index_download
+# Downloading ENA assemblies from COBSI index
 Generating an information table and downloading files from the COBSI index
 
-A simple python script that takes the from the ENA2018 database [here](http://ftp.ebi.ac.uk/pub/databases/ENA2018-bacteria-661k/sampleid_assembly_paths.txt) and produces a table with each sample's accession number and assembly URL. Second functionality is that it takes this big table and downloads all the assemblies according to a species name of Taxon ID that the user gives it. It also support multi processing to make things faster.
+A simple python script that takes the table from the ENA2018 database [here](http://ftp.ebi.ac.uk/pub/databases/ENA2018-bacteria-661k/sampleid_assembly_paths.txt) and produces a table with each sample's accession number and assembly URL. Second functionality is that it takes this big table and downloads all the assemblies according to a species name of Taxon ID that the user gives it. It also support multi processing to make things faster.
 
 ## Generate table
 First functionality is generating the big table.
