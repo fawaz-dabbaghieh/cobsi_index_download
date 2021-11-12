@@ -31,6 +31,16 @@ def match_name(given_name, sample_name):
 	return False
 
 
+def taxon_or_org(type, input, taxon=0, org=""):
+	if type == "taxon":
+		if input == taxon:
+			return True
+		return False
+
+	elif type == "org_name":
+		return match_name(input, org)
+
+
 def get_xml(accession):
 	xml = requests.get(f"https://www.ebi.ac.uk/ena/browser/api/xml/{accession}?download=true")
 	if xml.status_code != 200:
@@ -43,34 +53,39 @@ def get_xml(accession):
 
 def parse_xml(accession, path, queue):
 
+	info_dict = {"path":path, "ena_accession":accession}
+
 	if not get_xml(accession):
-		queue.put({"alias":accession, "path":path})
+		queue.put(info_dict)
+		return None
 
-	info_dict = {"path":path}
 
-	file_tree = ET.parse(f"tmp/{accession}")
-	tree_root = file_tree.getroot()
+	try:
+		file_tree = ET.parse(f"tmp/{accession}")
+		tree_root = file_tree.getroot()
 
-	for root_item in tree_root:
-		if root_item.tag == "SAMPLE":
-			sample = root_item
-			# the SAMPLE tag attributes has accession, alias and broker_name information
-			for key, value in sample.attrib.items():
-				info_dict[key] = value
+		for root_item in tree_root:
+			if root_item.tag == "SAMPLE":
+				sample = root_item
+				# the SAMPLE tag attributes has accession, alias and broker_name information
+				for key, value in sample.attrib.items():
+					info_dict[key] = value
 
-			for sample_element in sample:
-				if sample_element.tag == 'SAMPLE_NAME':
-					for element in sample_element:
-						if element.tag == "TAXON_ID":
-							info_dict["taxon_id"] = int(element.text)
-						if element.tag == "SCIENTIFIC_NAME":
-							info_dict["scientific_name"] = element.text.lower()
+				for sample_element in sample:
+					if sample_element.tag == 'SAMPLE_NAME':
+						for element in sample_element:
+							if element.tag == "TAXON_ID":
+								info_dict["taxon_id"] = int(element.text)
+							if element.tag == "SCIENTIFIC_NAME":
+								info_dict["scientific_name"] = element.text.lower()
+		queue.put(info_dict)
 
-	queue.put(info_dict)
+	except FileNotFoundError:
+		queue.put(info_dict)
 
 
 def return_line(info_dict):
-	keys = ["accession", "alias", "broker_name", "taxon_id", "scientific_name", "path"]
+	keys = ["accession", "alias","ena_accession", "broker_name", "taxon_id", "scientific_name", "path"]
 	output = []
 	# output = [info_dict["accession"], info_dict["alias"], info_dict["broker_name"], info_dict["taxon_id"], info_dict["scientific_name"], info_dict["path"]]
 	for k in keys:
@@ -141,7 +156,7 @@ if args.subcommands == "create_table":
 
 	out_file = open(args.output_table, "w")
 	# writing header
-	out_file.write("\t".join(["accession", "alias", "broker_name", "taxon_id", "sample_name", "path_to_assembly"]) + "\n")
+	out_file.write("\t".join(["accession", "alias", "ena_accession" , "broker_name", "taxon_id", "sample_name", "path_to_assembly"]) + "\n")
 	counter = 0
 	processes = []
 	checkpoint = int(len(samples)/10)
@@ -181,9 +196,9 @@ if args.subcommands == "create_table":
 		for p in processes:
 			p.join()
 		for p in processes:
-			out_file.write(return_line(queue.get) + "\n")
+			out_file.write(return_line(queue.get()) + "\n")
 
-	# subprocess.run("rm -r tmp/", shell=True)
+	subprocess.run("rm -r tmp/", shell=True)
 	out_file.close()
 
 
