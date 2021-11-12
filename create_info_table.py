@@ -68,6 +68,7 @@ def parse_xml(accession, path, queue):
 			if root_item.tag == "SAMPLE":
 				sample = root_item
 				# the SAMPLE tag attributes has accession, alias and broker_name information
+
 				for key, value in sample.attrib.items():
 					info_dict[key] = value
 
@@ -91,6 +92,8 @@ def return_line(info_dict):
 	for k in keys:
 		if k in info_dict:
 			output.append(info_dict[k])
+		else:
+			output.append("")
 
 	return("\t".join([str(x) for x in output]))
 
