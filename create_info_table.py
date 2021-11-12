@@ -31,14 +31,14 @@ def match_name(given_name, sample_name):
 	return False
 
 
-def taxon_or_org(type, input, taxon=0, org=""):
+def taxon_or_org(type, first, second):
 	if type == "taxon":
-		if input == taxon:
+		if first == second:
 			return True
 		return False
 
 	elif type == "org_name":
-		return match_name(input, org)
+		return match_name(first, second)
 
 
 def get_xml(accession):
@@ -218,54 +218,68 @@ if args.subcommands == "get_contigs":
 		print("You need to either give a taxon id or an organism, not both")
 		sys,exit()
 
+
 	if args.taxon_id is not None:
 		print(f"Will search for taxon id {args.taxon_id} and download the assemblies related to it in {args.out_dir}")
-
-		processes = []
-
-		with open(args.table, "r") as in_file:
-			next(in_file)
-			for l in in_file:
-				l = l.strip().split("\t")
-				if l[TAXON_ID] == str(args.taxon_id):
-					process = mp.Process(target=download_file, args=(l, args.out_dir))
-					processes.append(process)
-					if len(processes) == args.cores:
-						for p in processes:
-							p.start()
-						for p in processes:
-							p.join()
-
-						processes = []
-
-			if processes:
-				for p in processes:
-					p.start()
-				for p in processes:
-					p.join()
-
-
+		type = "taxon"
 	elif args.org_name is not None:
-		processes = []
+		print(f"Will search for organism {args.org_name} and download the assemblies related to it in {args.out_dir}")
 
-		with open(args.table, "r") as in_file:
-			next(in_file)
-			for l in in_file:
-				l = l.strip().split("\t")
-				if match_name(args.org_name, l[SAMPLE_NAME].lower()):
+	processes = []
 
-					process = mp.Process(target=download_file, args=(l, args.out_dir))
-					processes.append(process)
-					# pdb.set_trace()
-					if len(processes) == args.cores:
-						for p in processes:
-							p.start()
-						for p in processes:
-							p.join()
-						processes = []
+	with open(args.table, "r") as in_file:
+		next(in_file)  # skipping header
+		for l in in_file:
+			l = l.strip().split("\t")
+			if type == "taxon":
+				first = l[TAXON_ID]
+				second = args.taxon_id
+			else:
+				first = args.org_name
+				second = l[SAMPLE_NAME].lower()
 
-			if processes:
-				for p in processes:
-					p.start()
-				for p in processes:
-					p.join()
+			# if l[TAXON_ID] == str(args.taxon_id):
+			if taxon_or_org(type, first, second):
+				process = mp.Process(target=download_file, args=(l, args.out_dir))
+				processes.append(process)
+				if len(processes) == args.cores:
+					for p in processes:
+						p.start()
+					for p in processes:
+						p.join()
+
+					processes = []
+
+		if processes:
+			for p in processes:
+				p.start()
+			for p in processes:
+				p.join()
+
+
+	# elif args.org_name is not None:
+	# 	type = "org_name"
+
+	# 	processes = []
+
+	# 	with open(args.table, "r") as in_file:
+	# 		next(in_file)
+	# 		for l in in_file:
+	# 			l = l.strip().split("\t")
+	# 			if match_name(args.org_name, l[SAMPLE_NAME].lower()):
+
+	# 				process = mp.Process(target=download_file, args=(l, args.out_dir))
+	# 				processes.append(process)
+	# 				# pdb.set_trace()
+	# 				if len(processes) == args.cores:
+	# 					for p in processes:
+	# 						p.start()
+	# 					for p in processes:
+	# 						p.join()
+	# 					processes = []
+
+	# 		if processes:
+	# 			for p in processes:
+	# 				p.start()
+	# 			for p in processes:
+	# 				p.join()
