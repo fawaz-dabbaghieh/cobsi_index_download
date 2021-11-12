@@ -234,7 +234,7 @@ if args.subcommands == "get_contigs":
 			l = l.strip().split("\t")
 			if in_type == "taxon":
 				first = l[TAXON_ID]
-				second = args.taxon_id
+				second = str(args.taxon_id)
 			else:
 				first = args.org_name
 				second = l[SAMPLE_NAME].lower()
