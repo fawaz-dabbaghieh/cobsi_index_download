@@ -11,9 +11,9 @@ import multiprocessing as mp
 
 ACCESSION = 0
 ALIAS = 1
-TAXON_ID = 3
-SAMPLE_NAME = 4
-URL = 5
+TAXON_ID = 4
+SAMPLE_NAME = 5
+URL = 6
 
 def download_file(info_line, out_path):
 	# assembly = urllib.URLopener()
@@ -221,9 +221,10 @@ if args.subcommands == "get_contigs":
 
 	if args.taxon_id is not None:
 		print(f"Will search for taxon id {args.taxon_id} and download the assemblies related to it in {args.out_dir}")
-		type = "taxon"
+		in_type = "taxon"
 	elif args.org_name is not None:
 		print(f"Will search for organism {args.org_name} and download the assemblies related to it in {args.out_dir}")
+		in_type = "org_name"
 
 	processes = []
 
@@ -231,15 +232,14 @@ if args.subcommands == "get_contigs":
 		next(in_file)  # skipping header
 		for l in in_file:
 			l = l.strip().split("\t")
-			if type == "taxon":
+			if in_type == "taxon":
 				first = l[TAXON_ID]
 				second = args.taxon_id
 			else:
 				first = args.org_name
 				second = l[SAMPLE_NAME].lower()
 
-			# if l[TAXON_ID] == str(args.taxon_id):
-			if taxon_or_org(type, first, second):
+			if taxon_or_org(in_type, first, second) is True:
 				process = mp.Process(target=download_file, args=(l, args.out_dir))
 				processes.append(process)
 				if len(processes) == args.cores:
