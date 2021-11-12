@@ -93,7 +93,7 @@ def return_line(info_dict):
 		if k in info_dict:
 			output.append(info_dict[k])
 		else:
-			output.append("")
+			output.append("NA")
 
 	return("\t".join([str(x) for x in output]))
 
