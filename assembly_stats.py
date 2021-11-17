@@ -1,6 +1,5 @@
 import gzip
 import os
-import logging
 import sys
 import argparse
 import matplotlib.pyplot as plt
@@ -17,7 +16,7 @@ def read_fasta_gen(fasta_file_path):
 	"""
 
 	if not os.path.exists(fasta_file_path):
-		logging.error("file {} does not exist".format(fasta_file_path))
+		print(f"file {fasta_file_path} does not exist")
 		sys.exit()
 
 	if fasta_file_path.endswith("gz"):
@@ -87,7 +86,8 @@ if args.subcommands == "assemb_stats":
 		args.in_dir += os.sep
 
 	for f in os.listdir(args.in_dir):
-		assembly_files.append(args.in_dir + f)
+        if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("gz"):
+		  assembly_files.append(args.in_dir + f)
 
 	with open(args.out_table, "w") as out_file:
 		# writing the header
