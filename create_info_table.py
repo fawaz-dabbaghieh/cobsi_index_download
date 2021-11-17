@@ -10,21 +10,28 @@ import multiprocessing as mp
 
 
 ACCESSION = 0
+ENA_ACCESSION = 2
 ALIAS = 1
 TAXON_ID = 4
 SAMPLE_NAME = 5
 URL = 6
 
 def download_file(info_line, out_path):
-	# assembly = urllib.URLopener()
-	out_file_name = out_path + "_".join(["_".join(info_line[SAMPLE_NAME].split()), info_line[TAXON_ID], info_line[ALIAS], info_line[ACCESSION]]) + ".fa.gz"
-	r = requests.get(info_line[URL], allow_redirects=True)
-	with open(out_file_name, "wb") as out_file:
-		out_file.write(r.content)
+
+	out_file_name = out_path + "_".join(["_".join(info_line[SAMPLE_NAME].split()), info_line[TAXON_ID], info_line[ENA_ACCESSION], info_line[ACCESSION]]).replace(os.sep, "_") + ".fa.gz"
+	if not os.path.exists(out_file_name):
+
+		r = requests.get(info_line[URL], allow_redirects=True)
+		with open(out_file_name, "wb") as out_file:
+			out_file.write(r.content)
 
 	# urllib.urlretrieve(url, out_file_name)
 
 def match_name(given_name, sample_name):
+	# I match to any word in the sample name in the xml file
+	# because sometimes there are extra information related to strain
+	# so I don't know which index after splitting sample_name will match
+	# this is more of a general match, so it will download anything with given_name in it
 	for c in sample_name.split():
 		if c == given_name:
 			return True
