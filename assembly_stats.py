@@ -86,7 +86,7 @@ if args.subcommands == "assemb_stats":
 		args.in_dir += os.sep
 
 	for f in os.listdir(args.in_dir):
-        if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("gz"):
+		if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("gz"):
 		  assembly_files.append(args.in_dir + f)
 
 	with open(args.out_table, "w") as out_file:
