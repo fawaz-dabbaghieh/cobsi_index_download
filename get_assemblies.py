@@ -150,7 +150,7 @@ get_contigs.add_argument("--output_dir", dest="out_dir", type=str, default=".",
 						help="Speicfy the output directory for the assemblies")
 
 get_contigs.add_argument("--request_timeout", dest="req_timeout", type=int, default=20,
-						help="How long before timing out the file download request, so the script can move to next assembly")
+						help="How long before timing out the file download request, so the script can move to next assembly. Default: 20s")
 
 args = parser.parse_args()
 
