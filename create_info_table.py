@@ -16,14 +16,23 @@ TAXON_ID = 4
 SAMPLE_NAME = 5
 URL = 6
 
-def download_file(info_line, out_path):
+def download_file(info_line, out_path, req_timeout):
 
-	out_file_name = out_path + "_".join(["_".join(info_line[SAMPLE_NAME].split()), info_line[TAXON_ID], info_line[ENA_ACCESSION], info_line[ACCESSION]]).replace(os.sep, "_") + ".fa.gz"
+	out_file_name = out_path + "_".join(["_".join(info_line[SAMPLE_NAME].split()), info_line[TAXON_ID], info_line[ENA_ACCESSION], info_line[ACCESSION]]).replace(os.sep, "_").replace(".", "_").replace("__", "_") + ".fa.gz"
 	if not os.path.exists(out_file_name):
 
-		r = requests.get(info_line[URL], allow_redirects=True)
-		with open(out_file_name, "wb") as out_file:
-			out_file.write(r.content)
+		print(f"Going to download {info_line[URL]} and put it in {out_file_name}")
+		try:
+			r = requests.get(info_line[URL], allow_redirects=True, timeout=req_timeout)
+		except Exception as e:
+			print(f"Error: {e} there seems to be an error with getting {info_line[URL]}")
+			r = ""
+
+		if r:
+			with open(out_file_name, "wb") as out_file:
+				out_file.write(r.content)
+	else:
+		print(f"File {out_file_name} already exists, skipping that entry")
 
 	# urllib.urlretrieve(url, out_file_name)
 
@@ -140,6 +149,9 @@ get_contigs.add_argument("--org_name", dest="org_name", type=str, default=None,
 get_contigs.add_argument("--output_dir", dest="out_dir", type=str, default=".",
 						help="Speicfy the output directory for the assemblies")
 
+get_contigs.add_argument("--request_timeout", dest="req_timeout", type=int, default=20,
+						help="How long before timing out the file download request, so the script can move to next assembly")
+
 args = parser.parse_args()
 
 if args.cores > os.cpu_count():
@@ -165,6 +177,7 @@ if args.subcommands == "create_table":
 
 
 	out_file = open(args.output_table, "w")
+	print(f"Going to build the table and put it in {out_file}")
 	# writing header
 	out_file.write("\t".join(["accession", "alias", "ena_accession" , "broker_name", "taxon_id", "sample_name", "path_to_assembly"]) + "\n")
 	counter = 0
@@ -176,6 +189,7 @@ if args.subcommands == "create_table":
 	queue = mp.Queue()
 	processes = []
 
+	print(f"Going to loop through the samples and get their xml information to build the table")
 	for accession, path in samples:
 		# fixing the path to be a valid ftp path
 		new_path = path.split("/")
@@ -209,7 +223,9 @@ if args.subcommands == "create_table":
 			out_file.write(return_line(queue.get()) + "\n")
 
 	subprocess.run("rm -r tmp/", shell=True)
+
 	out_file.close()
+	print(f"Done!")
 
 
 if args.subcommands == "get_contigs":
@@ -235,6 +251,7 @@ if args.subcommands == "get_contigs":
 
 	processes = []
 
+	print(f"Looping through the table to check which samples match the desired species chosen")
 	with open(args.table, "r") as in_file:
 		next(in_file)  # skipping header
 		for l in in_file:
@@ -247,7 +264,7 @@ if args.subcommands == "get_contigs":
 				second = l[SAMPLE_NAME].lower()
 
 			if taxon_or_org(in_type, first, second) is True:
-				process = mp.Process(target=download_file, args=(l, args.out_dir))
+				process = mp.Process(target=download_file, args=(l, args.out_dir, args.req_timeout,))
 				processes.append(process)
 				if len(processes) == args.cores:
 					for p in processes:
@@ -257,12 +274,14 @@ if args.subcommands == "get_contigs":
 
 					processes = []
 
+		print(f"Finished most of the processes and checking if there are any leftovers")
 		if processes:
 			for p in processes:
 				p.start()
 			for p in processes:
 				p.join()
 
+		print(f"Done!")
 
 	# elif args.org_name is not None:
 	# 	type = "org_name"
