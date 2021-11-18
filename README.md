@@ -1,5 +1,5 @@
 # Downloading ENA assemblies from COBSI index
-Generating an information table and downloading files from the COBSI index
+This tool is related to the database described here in this artivle [here](https://www.ebi.ac.uk/about/news/press-releases/bacterial-genomic-data). Which has 660,000 bacterial genome assemblies from ENA 2018. This tool then helps the user to retrieve some basic information and download the desired assemblies based on the Taxon id or name of the species.
 
 A simple python script that takes the table from the ENA2018 database [here](http://ftp.ebi.ac.uk/pub/databases/ENA2018-bacteria-661k/sampleid_assembly_paths.txt) and produces a table with each sample's accession number and assembly URL. Second functionality is that it takes this big table and downloads all the assemblies according to a species name of Taxon ID that the user gives it. It also support multi processing to make things faster.
 
