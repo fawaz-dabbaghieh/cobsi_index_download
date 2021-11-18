@@ -92,6 +92,7 @@ if args.subcommands == "assemb_stats":
 	with open(args.out_table, "w") as out_file:
 		# writing the header
 		out_file.write("\t".join(["file_name", "num_of_contigs", "sequence_len"]) + "\n")
+
 		for f in assembly_files:
 			n_contigs = 0
 			seq_len = 0
@@ -117,7 +118,7 @@ if args.subcommands == "histograms":
 
 
 	fig, axs = plt.subplots(1, 2, sharey=True, tight_layout=True)
-	fig.suptitle('Distributions for assemblies', fontsize=16)
+	fig.suptitle('Distributions for assemblies', fontsize=12)
 
 	#  Sturge's rule for choosing number of bins for a histogram
 	contigs_bins = int(1 + (3.22*log(len(n_contigs))))

@@ -8,7 +8,7 @@ First functionality is generating the big table.
 
 Example:
 ```bash
-python3 create_info_tabl.py --cores 10 create_table --samples sampleid_assembly_paths.txt --output_table sampleid_assembly_table.tsv
+python3 get_assemblies.py --cores 10 create_table --samples sampleid_assembly_paths.txt --output_table sampleid_assembly_table.tsv
 ```
 
 This table will have this information `accession alias broker_name taxon_id sample_name path_to_assembly`.
@@ -19,7 +19,19 @@ The subcommand `get_contigs` takes the table produced in the first step and take
 
 Example:
 ```bash
-python3 create_info_tabl.py --cores 20 get_contigs --info_table sampleid_assembly_table.tsv --taxon_id 1392 --output_dir assemblies_id_1392/
+python3 create_info_tabl.py --cores 20 get_contigs --info_table sampleid_assembly_table.tsv --taxon_id 1392 --output_dir assemblies_id_1392/ --request_timeout 15 > log.txt
 
-python3 create_info_tabl.py --cores 10 get_contigs --info_table sampleid_assembly_table.tsv --org_name bacillus --output_dir assemblies_bacillus/
+python3 create_info_tabl.py --cores 10 get_contigs --info_table sampleid_assembly_table.tsv --org_name bacillus --output_dir assemblies_bacillus/ > log.txt
 ```
+
+The `request_timout` argument is to cancel the download in case there was a problem and the download request wasn't being processed. This way, it reports it in the log file but also doesn't keep the thread running and can move on to other ones to download. In case this happens, one simple way to get the missing assemblies is to run the script again, if nothing of the inputs changed, then it will skip the files that were already downloaded and download the missing one.
+
+
+# Statistics on the downloaded assemblies
+The script `assembly_stats.py` can help generate simple stats on the assemblies
+
+## Generate stats table
+By calling `python3 assembly_stats.py assemb_stats --in_dir assemblies/ --out_table assemblies_info.tsv` you get a TSV files with three columns, the assembly file path, number of contigs and size of sequence in that assembly.
+
+## Generate simple histogram
+By calling `python3 assembly_stats.py histograms --in_table assemblies_info.tsv --out_png assemblies_hists.png` It will produces a PNG files with two histograms, one with distribution of number of contigs and the other with distribution of size of assemblies downloaded.
