@@ -11,7 +11,7 @@ Example:
 python3 get_assemblies.py --cores 10 create_table --samples sampleid_assembly_paths.txt --output_table sampleid_assembly_table.tsv
 ```
 
-This table will have this information `accession alias broker_name taxon_id sample_name path_to_assembly`.
+This table will have this information `accession alias ena_accession broker_name taxon_id sample_name path_to_assembly`.
 
 
 ## Download assemblies
