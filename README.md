@@ -31,7 +31,7 @@ The `request_timout` argument is to cancel the download in case there was a prob
 The script `assembly_stats.py` can help generate simple stats on the assemblies
 
 ## Generate stats table
-By calling `python3 assembly_stats.py assemb_stats --in_dir assemblies/ --out_table assemblies_info.tsv` you get a TSV files with three columns, the assembly file path, number of contigs and size of sequence in that assembly.
+By calling `python3 assembly_stats.py assemb_stats --in_dir assemblies/ --out_table assemblies_info.tsv --cores 10` you get a TSV files with three columns, the assembly file path, number of contigs and size of sequence in that assembly.
 
 ## Generate simple histogram
 By calling `python3 assembly_stats.py histograms --in_table assemblies_info.tsv --out_png assemblies_hists.png` It will produces a PNG files with two histograms, one with distribution of number of contigs and the other with distribution of size of assemblies downloaded.
