@@ -56,6 +56,12 @@ def read_fasta_gen(fasta_file_path):
 
 
 def assembly_stats(fasta_file, queue):
+	"""
+	Takes an inpput fasta file path (or gzipped one) and a queue
+	goes through each sequences in the fasta file
+	finally add the number of contigs and the amount of sequences to the queue
+	the queue is for the multithreading part.
+	"""
 	n_contigs = 0
 	seq_len = 0
 	for seq_name, seq in read_fasta_gen(fasta_file):
@@ -65,9 +71,9 @@ def assembly_stats(fasta_file, queue):
 		seq_len += len(seq)
 	if not seq:
 		# so I can catch the problematic ones from the table as well not just from the log
-		queue.put("\t".join([f, "0", "0"]) + "\n")
+		queue.put("\t".join([fasta_file, "0", "0"]) + "\n")
 	else:
-		queue.put("\t".join([f, str(n_contigs), str(seq_len)]) + "\n")
+		queue.put("\t".join([fasta_file, str(n_contigs), str(seq_len)]) + "\n")
 
 
 parser = argparse.ArgumentParser(description='Some stats related to downloaded assemblies', add_help=True)
@@ -123,7 +129,6 @@ if args.subcommands == "assemb_stats":
 		queue = mp.Queue()
 		processes = []
 
-		print(f"Going to loop through the samples and get their xml information to build the table")
 		for f in assembly_files:
 			# fixing the path to be a valid ftp path
 
