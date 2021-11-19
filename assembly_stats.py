@@ -113,7 +113,7 @@ if args.subcommands == "assemb_stats":
 	with open(args.out_table, "w") as out_file:
 		# writing the header
 		out_file.write("\t".join(["file_name", "num_of_contigs", "sequence_len"]) + "\n")
-
+		counter = 0
 		queue = mp.Queue()
 		processes = []
 
@@ -135,8 +135,6 @@ if args.subcommands == "assemb_stats":
 				processes = []
 				queue = mp.Queue()
 
-			if counter % checkpoint == 0:
-				print(f"So far {counter} accessions have been processed")
 
 		# processing the leftovers
 		if processes:
