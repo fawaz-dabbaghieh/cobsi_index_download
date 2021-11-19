@@ -26,25 +26,41 @@ def read_fasta_gen(fasta_file_path):
 
 	seqs = []
 	seq_name = ""
-	for line in fasta_file:
-		line = line.strip()
-		if not line:  # empty line
-			continue
 
-		if line.startswith(">"):
-			if len(seqs) != 0:  # there was a sequence before
-				yield seq_name, "".join(seqs)
-				seq_name = line[1:]
-				seqs = []
+	# if there's a problem with the gzipped file, it'll through an error
+	# so I put the whole thing in try and except
+	try:
+		for line in fasta_file:
+			line = line.strip()
+			if not line:  # empty line
+				continue
+
+			if line.startswith(">"):
+				if len(seqs) != 0:  # there was a sequence before
+					yield seq_name, "".join(seqs)
+					seq_name = line[1:]
+					seqs = []
+				else:
+					seq_name = line[1:]
 			else:
-				seq_name = line[1:]
-		else:
-			seqs.append(line)
+				seqs.append(line)
 
-	# last sequence
-	if seqs:
-		yield seq_name, "".join(seqs)
+		# last sequence
+		if seqs:
+			yield seq_name, "".join(seqs)
+	except Exception as e:
+		print(f"Error: {e} happened to file {fasta_file_path}")
+		yield seq_name, "".join(seq)
 
+
+def assembly_stats(fasta_file):
+
+	n_contigs = 0
+	seq_len = 0
+	for seq_name, seq in read_fasta_gen(fasta_file):
+		n_contigs += 1
+		seq_len += len(seq)
+	return "\t".join([f, str(n_contigs), str(seq_len)]) + "\n"
 
 
 parser = argparse.ArgumentParser(description='Some stats related to downloaded assemblies', add_help=True)
@@ -57,6 +73,9 @@ creating_table.add_argument("--in_dir", dest="in_dir", type=str, default=None,
 							help="Provide a directory that contains the assemblies in .fasta or .fasta.gz format")
 creating_table.add_argument("--out_table", dest="out_table", type=str, default="assembly_info_table.tsv",
 							help="The output table path/name. Default: assembly_info_table.tsv")
+creating_table.add_argument("--cores", dest="cores", type=int, default=4,
+							help="Choose how many cores to use to make this fast in case there are many assemblies. Default: 4")
+
 
 histograms = subparsers.add_parser('histograms', help='Plotting simple histograms using the table created in assemb_stats')
 histograms.add_argument("--in_table", dest="in_table", type=str, default=None,
@@ -86,20 +105,47 @@ if args.subcommands == "assemb_stats":
 		args.in_dir += os.sep
 
 	for f in os.listdir(args.in_dir):
-		if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("gz"):
+		if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("fa.gz") or f.endswith("fasta.gz"):
 		  assembly_files.append(args.in_dir + f)
+
 
 	with open(args.out_table, "w") as out_file:
 		# writing the header
 		out_file.write("\t".join(["file_name", "num_of_contigs", "sequence_len"]) + "\n")
 
+		queue = mp.Queue()
+		processes = []
+
+		print(f"Going to loop through the samples and get their xml information to build the table")
 		for f in assembly_files:
-			n_contigs = 0
-			seq_len = 0
-			for seq_name, seq in read_fasta_gen(f):
-				n_contigs += 1
-				seq_len += len(seq)
-			out_file.write("\t".join([f, str(n_contigs), str(seq_len)]) + "\n")
+			# fixing the path to be a valid ftp path
+
+			process = mp.Process(target=assembly_stats, args=(f,))
+			processes.append(process)
+			counter += 1
+			if len(processes) == args.cores:
+				for p in processes:
+					p.start()
+				for p in processes:
+					p.join()
+				for p in processes:
+					out_file.write(queue.get())  # writing out the lines
+				# emptying to prepare the next batch of graphs
+				processes = []
+				queue = mp.Queue()
+
+			if counter % checkpoint == 0:
+				print(f"So far {counter} accessions have been processed")
+
+		# processing the leftovers
+		if processes:
+			for p in processes:
+				p.start()
+			for p in processes:
+				p.join()
+			for p in processes:
+				out_file.write(queue.get())
+
 
 
 if args.subcommands == "histograms":
@@ -125,7 +171,7 @@ if args.subcommands == "histograms":
 
 	axs[0].hist(n_contigs, bins=contigs_bins)
 	axs[0].set_title("Contigs distribution")
-	axs[0].set_xlabel("# contigs")
+	axs[0].set_xlabel("Num. of Contigs")
 	axs[0].set_ylabel("Frequency")
 
 	seq_bins = int(1 + (3.22*log(len(seq_lens))))

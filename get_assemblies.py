@@ -282,30 +282,3 @@ if args.subcommands == "get_contigs":
 				p.join()
 
 		print(f"Done!")
-
-	# elif args.org_name is not None:
-	# 	type = "org_name"
-
-	# 	processes = []
-
-	# 	with open(args.table, "r") as in_file:
-	# 		next(in_file)
-	# 		for l in in_file:
-	# 			l = l.strip().split("\t")
-	# 			if match_name(args.org_name, l[SAMPLE_NAME].lower()):
-
-	# 				process = mp.Process(target=download_file, args=(l, args.out_dir))
-	# 				processes.append(process)
-	# 				# pdb.set_trace()
-	# 				if len(processes) == args.cores:
-	# 					for p in processes:
-	# 						p.start()
-	# 					for p in processes:
-	# 						p.join()
-	# 					processes = []
-
-	# 		if processes:
-	# 			for p in processes:
-	# 				p.start()
-	# 			for p in processes:
-	# 				p.join()
