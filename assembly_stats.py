@@ -52,16 +52,22 @@ def read_fasta_gen(fasta_file_path):
 			yield seq_name, "".join(seqs)
 	except Exception as e:
 		print(f"Error: {e} happened to file {fasta_file_path}")
-		yield seq_name, len(seqs)
+		yield seq_name, None
 
 
 def assembly_stats(fasta_file, queue):
 	n_contigs = 0
 	seq_len = 0
 	for seq_name, seq in read_fasta_gen(fasta_file):
+		if not seq:
+			break
 		n_contigs += 1
 		seq_len += len(seq)
-	queue.put("\t".join([f, str(n_contigs), str(seq_len)]) + "\n")
+	if not seq:
+		# so I can catch the problematic ones from the table as well not just from the log
+		queue.put("\t".join([f, "0", "0"]) + "\n")
+	else:
+		queue.put("\t".join([f, str(n_contigs), str(seq_len)]) + "\n")
 
 
 parser = argparse.ArgumentParser(description='Some stats related to downloaded assemblies', add_help=True)
