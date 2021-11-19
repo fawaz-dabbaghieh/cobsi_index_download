@@ -196,3 +196,30 @@ if args.subcommands == "histograms":
 		sys.exit()
 
 	plt.savefig(args.out_png, dpi=900)
+
+
+	# log scaled one
+	fig, axs = plt.subplots(1, 2, sharey=True, tight_layout=True)
+	fig.suptitle('Distributions for assemblies', fontsize=12)
+
+	#  Sturge's rule for choosing number of bins for a histogram
+	contigs_bins = int(1 + (3.22*log(len(n_contigs))))
+	plt.yscale('log')
+	axs[0].hist(n_contigs, bins=contigs_bins)
+	axs[0].set_title("Contigs distribution")
+	axs[0].set_xlabel("Num. of Contigs")
+	axs[0].set_ylabel("Frequency")
+
+	seq_bins = int(1 + (3.22*log(len(seq_lens))))
+	axs[1].hist(seq_lens, bins=seq_bins)
+	axs[1].set_title("Assembly lengths distribution")
+	axs[1].set_xlabel("Assembly lengths")
+	axs[1].set_ylabel("Frequency")
+
+
+
+	if os.path.exists("log_scaled" + args.out_png):
+		print(f"Path {args.out_png} already exists")
+		sys.exit()
+
+	plt.savefig("log_scaled" + args.out_png, dpi=900)
