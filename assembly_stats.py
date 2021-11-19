@@ -2,6 +2,7 @@ import gzip
 import os
 import sys
 import argparse
+import pdb
 import matplotlib.pyplot as plt
 from math import log
 import multiprocessing as mp
@@ -54,14 +55,13 @@ def read_fasta_gen(fasta_file_path):
 		yield seq_name, "".join(seq)
 
 
-def assembly_stats(fasta_file):
-
+def assembly_stats(fasta_file, queue):
 	n_contigs = 0
 	seq_len = 0
 	for seq_name, seq in read_fasta_gen(fasta_file):
 		n_contigs += 1
 		seq_len += len(seq)
-	return "\t".join([f, str(n_contigs), str(seq_len)]) + "\n"
+	queue.put("\t".join([f, str(n_contigs), str(seq_len)]) + "\n")
 
 
 parser = argparse.ArgumentParser(description='Some stats related to downloaded assemblies', add_help=True)
@@ -121,7 +121,7 @@ if args.subcommands == "assemb_stats":
 		for f in assembly_files:
 			# fixing the path to be a valid ftp path
 
-			process = mp.Process(target=assembly_stats, args=(f,))
+			process = mp.Process(target=assembly_stats, args=(f,queue,))
 			processes.append(process)
 			counter += 1
 			if len(processes) == args.cores:
@@ -130,6 +130,7 @@ if args.subcommands == "assemb_stats":
 				for p in processes:
 					p.join()
 				for p in processes:
+
 					out_file.write(queue.get())  # writing out the lines
 				# emptying to prepare the next batch of graphs
 				processes = []
