@@ -52,7 +52,7 @@ def read_fasta_gen(fasta_file_path):
 			yield seq_name, "".join(seqs)
 	except Exception as e:
 		print(f"Error: {e} happened to file {fasta_file_path}")
-		yield seq_name, "".join(len(seqs))
+		yield seq_name, len(seqs)
 
 
 def assembly_stats(fasta_file, queue):
