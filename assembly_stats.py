@@ -4,6 +4,7 @@ import sys
 import argparse
 import matplotlib.pyplot as plt
 from math import log
+import multiprocessing as mp
 
 
 def read_fasta_gen(fasta_file_path):
