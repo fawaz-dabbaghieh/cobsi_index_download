@@ -118,7 +118,7 @@ if args.subcommands == "assemb_stats":
 		args.in_dir += os.sep
 
 	for f in os.listdir(args.in_dir):
-		if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("fa.gz") or f.endswith("fasta.gz"):
+		if f.endswith(".fasta") or f.endswith(".fa") or f.endswith("fa.gz") or f.endswith("fasta.gz") or f.endswith("fna.gz"):
 		  assembly_files.append(args.in_dir + f)
 
 
@@ -218,8 +218,8 @@ if args.subcommands == "histograms":
 
 
 
-	if os.path.exists("log_scaled" + args.out_png):
+	if os.path.exists("log_scaled_" + args.out_png):
 		print(f"Path {args.out_png} already exists")
 		sys.exit()
 
-	plt.savefig("log_scaled" + args.out_png, dpi=900)
+	plt.savefig("log_scaled_" + args.out_png, dpi=900)
